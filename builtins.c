@@ -5,8 +5,21 @@
 void shellvis_cd(char** args) {
     if (chdir(args[1]) == 0) {
         printf("wordir changed to %s\n\n", args[1]);
+        fflush(stdout);
     } else {
         perror("cd");
+    }
+}
+
+void shellvis_pwd() {
+    char buff[1024];
+    char* result = getcwd(buff, 1024);
+
+    if (result == NULL) {
+        perror("pwd");
+    } else {
+        printf("%s\n", result);
+        fflush(stdout);
     }
 }
 
@@ -17,8 +30,11 @@ void shellvis_cd(char** args) {
 int call_builtin(char** args) {
     if (strcmp(args[0], "cd") == 0) {
         shellvis_cd(args);
-        return 1;
+    } else if (strcmp(args[0], "pwd") == 0) {
+        shellvis_pwd();
+    } else {
+        return 0;
     }
 
-    return 0;
+    return 1;
 }

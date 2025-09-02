@@ -50,6 +50,7 @@ void start_process(char** args, int is_detached) {
     }
 }
 
+
 int main(void) {
     char line[MAX_LINE];
     char* args[MAX_LINE / 2 + 1];
@@ -65,8 +66,10 @@ int main(void) {
         line[strcspn(line, "\n")] = 0;
 
         size_t token_count = (size_t) split_string(line, " ", args, MAX_LINE / 2 + 1);
+        if (token_count == 0)
+            continue;
 
-        if (token_count > 0 && strcmp(args[0], "exit") == 0)
+        if (strcmp(args[0], "exit") == 0)
             break;        
 
         int builtin_called = call_builtin(args);
