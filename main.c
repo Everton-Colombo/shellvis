@@ -55,7 +55,7 @@ int main(void) {
     char* args[MAX_LINE / 2 + 1];
 
     while (1) {
-        printf("osh> ");
+        printf("shellvis> ");
         fflush(stdout);
 
         if (fgets(line, sizeof(line), stdin) == NULL) {
@@ -65,10 +65,9 @@ int main(void) {
         line[strcspn(line, "\n")] = 0;
 
         size_t token_count = (size_t) split_string(line, " ", args, MAX_LINE / 2 + 1);
-        args[token_count] = NULL;
 
-        if (strcmp(args[0], "exit") == 0)
-            break;
+        if (token_count > 0 && strcmp(args[0], "exit") == 0)
+            break;        
 
         int builtin_called = call_builtin(args);
         if (!builtin_called) {
