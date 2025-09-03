@@ -1,32 +1,16 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
 #include "builtins.h"
+#include "utils.h"
 
 #define MAX_LINE 1024
 
-size_t split_string(char *input, const char *delimiters, char *tokens[], size_t max_tokens) {
-    if (!input || !delimiters || !tokens || max_tokens == 0) {
-        return 0;
-    }
-    
-    size_t count = 0;
-    char *saveptr = NULL;
-    char *token = strtok_r(input, delimiters, &saveptr);
-    
-    while (token != NULL && count < max_tokens - 1) {
-        tokens[count] = token;
-        count++;
-        token = strtok_r(NULL, delimiters, &saveptr);
-    }
-    
-    // Null-terminate the array
-    tokens[count] = NULL;
-    return count;
-}
 
 void start_process(char** args, int is_detached) {
     pid_t pid;
@@ -51,15 +35,30 @@ void start_process(char** args, int is_detached) {
 }
 
 
-int main(void) {
+int main(int argc, char* argv[]) {
     char line[MAX_LINE];
     char* args[MAX_LINE / 2 + 1];
 
-    while (1) {
-        printf("shellvis> ");
-        fflush(stdout);
+    FILE* input_stream = stdin;
 
-        if (fgets(line, sizeof(line), stdin) == NULL) {
+    if (argc > 1) {
+        input_stream = fopen(argv[1], "r");
+        if (input_stream == NULL) {
+            perror("Error opening file");
+            input_stream = stdin;
+        } else {
+            printf("[shellvis]: Operating in batch mode. Input file: %s\n", argv[1]);
+            fflush(stdout);
+        }
+    }
+
+    while (1) {
+        if (input_stream == stdin) {
+            printf("shellvis> ");
+            fflush(stdout);
+        }
+
+        if (fgets(line, sizeof(line), input_stream) == NULL) {
             printf("\n");
             break; 
         }
