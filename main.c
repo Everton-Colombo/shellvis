@@ -55,6 +55,22 @@ void start_process(char** args, int is_detached) {
     }
 }
 
+int shellvis_execute(int argc, char** args) {
+    if (argc == 0)
+        return 1;     
+
+    // Searches for builtin commands
+    for (int i = 0; i < shellvis_num_builtins(); i++) {
+        if (strcmp(args[0], builtin_names[i]) == 0) {
+            return (*builtin_funcs[i])(args);
+        }
+    }
+
+    // If no builtin command was found, execute external command
+    start_process(args, args[argc-1][0] == '&');
+    return 0;
+}
+
 
 int main(int argc, char* argv[]) {
     char line[MAX_LINE];
@@ -88,17 +104,9 @@ int main(int argc, char* argv[]) {
         line[strcspn(line, "\n")] = 0;
 
         size_t token_count = (size_t) split_string(line, " ", args, MAX_LINE / 2 + 1);
-        if (token_count == 0)
-            continue;
 
-        if (strcmp(args[0], "exit") == 0)
-            break;        
-
-        int builtin_called = call_builtin(args);
-        if (!builtin_called) {
-            int is_detached = args[token_count-1][0] == '&';
-            start_process(args, is_detached);
-        }
+        shellvis_execute(token_count, args);
+        
     }
 
     return 0;
