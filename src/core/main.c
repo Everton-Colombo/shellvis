@@ -11,9 +11,23 @@
 
 #define MAX_LINE 1024
 
+struct str_list g_path;
+
+void init() {
+    TAILQ_INIT(&g_path);
+
+    // Add bin/external_commands to PATH
+    shellvis_execute(2, (char*[]){"path", "bin/external_commands", NULL});
+}
+
+
+void terminate() {
+    strlist_free(&g_path);
+}
+
 void greetings() {
     FILE *file;
-    char line[1024];
+    char line[MAX_LINE];
     
     file = fopen("data/elvis.txt", "r");
     if (file == NULL) {
@@ -21,9 +35,8 @@ void greetings() {
         return;
     }
     
-    // Read and print each line
     while (fgets(line, sizeof(line), file) != NULL) {
-        printf("%s", line);  // Print line as-is (includes newline)
+        printf("%s", line);
     }
     
     fclose(file);
@@ -38,12 +51,30 @@ void start_process(char** args, int is_detached) {
     pid = fork();
 
     if (pid == 0) { // If is child process
-        int result = execvp(args[0], args);
-        if (result == -1) {
-            printf("\"%s\": ", args[0]);
-            fflush(stdout);
-            perror("");
+        char full_path[MAX_LINE];
+        int found_executable = 0;
+
+        struct str_listnode* node;
+        TAILQ_FOREACH(node, &g_path, links) {
+            snprintf(full_path, sizeof(full_path), "%s/%s", node->str, args[0]);
+            if (access(full_path, X_OK) == 0) {
+                found_executable = 1;
+                break;
+            }
         }
+        
+        if (found_executable) {
+            int result = execvp(args[0], args);
+            if (result == -1) {
+                printf("\"%s\": ", args[0]);
+                fflush(stdout);
+                perror("");
+            }
+        } else {
+            printf("Executable \"%s\" not found. Use the \'path\' command to add directories to the internal PATH list.\n", args[0]);
+        }
+
+        
 
     } else if (pid > 0) {   // If is parent process and succeeded
         if (!is_detached) {
@@ -62,7 +93,7 @@ int shellvis_execute(int argc, char** args) {
     // Searches for builtin commands
     for (int i = 0; i < shellvis_num_builtins(); i++) {
         if (strcmp(args[0], builtin_names[i]) == 0) {
-            return (*builtin_funcs[i])(args);
+            return (*builtin_funcs[i])(argc, args);
         }
     }
 
@@ -77,6 +108,8 @@ int main(int argc, char* argv[]) {
     char* args[MAX_LINE / 2 + 1];
 
     FILE* input_stream = stdin;
+
+    init();
 
     if (argc > 1) {
         input_stream = fopen(argv[1], "r");
@@ -104,10 +137,10 @@ int main(int argc, char* argv[]) {
         line[strcspn(line, "\n")] = 0;
 
         size_t token_count = (size_t) split_string(line, " ", args, MAX_LINE / 2 + 1);
-
         shellvis_execute(token_count, args);
-        
     }
+
+    terminate();
 
     return 0;
 }
