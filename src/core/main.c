@@ -64,7 +64,7 @@ void start_process(char** args, int is_detached) {
         }
         
         if (found_executable) {
-            int result = execvp(args[0], args);
+            int result = execvp(full_path, args);
             if (result == -1) {
                 printf("\"%s\": ", args[0]);
                 fflush(stdout);
@@ -73,8 +73,6 @@ void start_process(char** args, int is_detached) {
         } else {
             printf("Executable \"%s\" not found. Use the \'path\' command to add directories to the internal PATH list.\n", args[0]);
         }
-
-        
 
     } else if (pid > 0) {   // If is parent process and succeeded
         if (!is_detached) {
@@ -98,7 +96,7 @@ int shellvis_execute(int argc, char** args) {
     }
 
     // If no builtin command was found, execute external command
-    start_process(args, args[argc-1][0] == '&');
+    start_process(args, 0);
     return 0;
 }
 

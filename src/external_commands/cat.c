@@ -3,8 +3,7 @@
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: cat <file>.\n");
-        perror("cat");
+        printf("Usage: cat <file>.\n");
         return -1;
     }
 
@@ -13,7 +12,7 @@ int main(int argc, char* argv[]) {
     
     file = fopen(argv[1], "r");
     if (file == NULL) {
-        perror("cat");
+        perror("Error opening file");
         return -1;
     }
 
@@ -23,5 +22,6 @@ int main(int argc, char* argv[]) {
 
     fclose(file);
 
+    printf("\n");
     return 0;
 }
