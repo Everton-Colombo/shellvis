@@ -11,6 +11,27 @@
 
 #define MAX_LINE 1024
 
+void greetings() {
+    FILE *file;
+    char line[1024];
+    
+    file = fopen("data/elvis.txt", "r");
+    if (file == NULL) {
+        perror("Error opening file");
+        return;
+    }
+    
+    // Read and print each line
+    while (fgets(line, sizeof(line), file) != NULL) {
+        printf("%s", line);  // Print line as-is (includes newline)
+    }
+    
+    fclose(file);
+
+
+    printf("\n\t SHELLVIS v0.0.1\n\n");
+    printf("This system is 100%% bug-free. Any observed anomalies are features, not errors.\nPlease report any new features to the administrator.\n\n");
+}
 
 void start_process(char** args, int is_detached) {
     pid_t pid;
@@ -50,6 +71,8 @@ int main(int argc, char* argv[]) {
             printf("[shellvis]: Operating in batch mode. Input file: %s\n", argv[1]);
             fflush(stdout);
         }
+    } else {
+        greetings();
     }
 
     while (1) {
