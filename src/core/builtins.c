@@ -31,21 +31,28 @@ int shellvis_pwd(int argc, char** args) {
     }
 }
 
-int shellvis_path(int argc, char** args) {
+int shellvis_path(int argc, char** args) { 
+    int silent_mode = 0;
+    if (argc == 3 && strcmp("--shh", args[2]) == 0)
+        silent_mode = 1;
+
     for (int i = 1; i < argc; i++) {
         char full_path[1024];
         if (access(args[i], F_OK) == 0 && realpath(args[1], full_path) != NULL) {
             strlist_append(&g_path, full_path);
-            printf("Added \"%s\" to internal PATH.\n", full_path);
+            if (!silent_mode)
+                printf("Added \"%s\" to internal PATH.\n", full_path);
         } else {
-            printf("Could not access \"%s\". Not added to internal PATH.\n", args[i]);
+            if (!silent_mode)
+                printf("Could not access \"%s\". Not added to internal PATH.\n", args[i]);
         }
     }
 
-    printf("\n");
-
-    printf("Internal PATH list:\n");
-    strlist_print(&g_path);
+    if (!silent_mode) {
+        printf("\n");
+        printf("Internal PATH list:\n");
+        strlist_print(&g_path);
+    }
 
     return 0; 
 }

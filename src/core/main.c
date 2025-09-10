@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <stdbool.h>
 
 #include "builtins.h"
 #include "utils.h"
@@ -17,7 +18,10 @@ void init() {
     TAILQ_INIT(&g_path);
 
     // Add bin/external_commands to PATH
-    shellvis_execute(2, (char*[]){"path", "bin/external_commands", NULL});
+    shellvis_execute(3, (char*[]){"path", "bin/external_commands", "--shh", NULL});
+
+    // Add /bin to PATH
+    shellvis_execute(3, (char*[]){"path", "/bin", "--shh", NULL});
 }
 
 
@@ -46,25 +50,31 @@ void greetings() {
     printf("This system is 100%% bug-free. Any observed anomalies are features, not errors.\nPlease report any new features to the administrator.\n\n");
 }
 
-void start_process(char** args, int is_detached) {
+void start_process(char** args, bool is_detached, bool search_path) {
     pid_t pid;
     pid = fork();
 
     if (pid == 0) { // If is child process
-        char full_path[MAX_LINE];
-        int found_executable = 0;
+        char final_path[MAX_LINE];
+        bool found_executable = false;
 
-        struct str_listnode* node;
-        TAILQ_FOREACH(node, &g_path, links) {
-            snprintf(full_path, sizeof(full_path), "%s/%s", node->str, args[0]);
-            if (access(full_path, X_OK) == 0) {
-                found_executable = 1;
-                break;
+        if (search_path) {
+            struct str_listnode* node;
+            TAILQ_FOREACH(node, &g_path, links) {
+                snprintf(final_path, sizeof(final_path), "%s/%s", node->str, args[0]);
+                if (access(final_path, X_OK) == 0) {
+                    found_executable = 1;
+                    break;
+                }
             }
+        } else {
+            printf("LocalSearch\n");
+            strcpy(final_path, args[0]);
+            found_executable = access(final_path, X_OK) == 0;
         }
         
         if (found_executable) {
-            int result = execvp(full_path, args);
+            int result = execv(final_path, args);
             if (result == -1) {
                 printf("\"%s\": ", args[0]);
                 fflush(stdout);
@@ -86,7 +96,7 @@ void start_process(char** args, int is_detached) {
 
 int shellvis_execute(int argc, char** args) {
     if (argc == 0)
-        return 1;     
+        return 1;
 
     // Searches for builtin commands
     for (int i = 0; i < shellvis_num_builtins(); i++) {
@@ -96,7 +106,7 @@ int shellvis_execute(int argc, char** args) {
     }
 
     // If no builtin command was found, execute external command
-    start_process(args, 0);
+    start_process(args, false, strncmp("./", args[0], 2) != 0);
     return 0;
 }
 
@@ -122,7 +132,7 @@ int main(int argc, char* argv[]) {
         greetings();
     }
 
-    while (1) {
+    while (true) {
         if (input_stream == stdin) {
             printf("shellvis> ");
             fflush(stdout);
