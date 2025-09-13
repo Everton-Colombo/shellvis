@@ -67,7 +67,7 @@ void child_process_routine(command_t command, bool search_path) {
     exit(EXIT_FAILURE);
 }
 
-void start_process(command_t command, bool is_detached, bool search_path) {
+void start_process(command_t command, bool search_path) {
     pid_t pid;
     pid = fork();
 
@@ -75,7 +75,9 @@ void start_process(command_t command, bool is_detached, bool search_path) {
         child_process_routine(command, search_path);
 
     } else if (pid > 0) {   // If is parent process and succeeded
-        if (!is_detached) {
+        if (command.is_detached) {
+            printf("PID: %d\n", pid);
+        } else {
             int status;
             wait(&status);
         }
@@ -96,7 +98,7 @@ int shellvis_execute(command_t parsed_command) {
     }
 
     // If no builtin command was found, execute external command
-    start_process(parsed_command, false, strncmp("./", parsed_command.args[0], 2) != 0);
+    start_process(parsed_command, strncmp("./", parsed_command.args[0], 2) != 0);
     return 0;
 }
 
@@ -105,7 +107,8 @@ command_t parse_command(int argc, char** args) {
         .argc = 0,
         .args = NULL,
         .istream = stdin,
-        .ostream = stdout
+        .ostream = stdout,
+        .is_detached = false
     };
 
     // Creating new args array, clean of any redirects
@@ -139,6 +142,9 @@ command_t parse_command(int argc, char** args) {
             } else {
                 printf("[shellvis]: Missing filename after '<'\n");
             }
+        } else if (strcmp("&", args[i]) == 0) {
+            // Detached execution
+            parsed_command.is_detached = true;
         } else {
             // Regular argument
             new_args[new_argc] = args[i];

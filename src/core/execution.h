@@ -2,6 +2,7 @@
 #define EXECUTION_H
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "utils.h"
 
 extern struct str_list g_path;
@@ -11,6 +12,7 @@ typedef struct {
     char** args;
     FILE* istream;
     FILE* ostream;
+    bool is_detached; 
 } command_t;
 
 int shellvis_execute(command_t parsed_command);
