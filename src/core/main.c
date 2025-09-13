@@ -91,10 +91,15 @@ int main(int argc, char* argv[]) {
         line[strcspn(line, "\n")] = '\0';
 
         size_t token_count = (size_t) split_string(line, " ", args, MAX_LINE / 2 + 1);
-        command_t parsed_command = parse_command(token_count, args);
-        shellvis_execute(parsed_command);
-        cleanup_command(&parsed_command);
+
+        // command_t parsed_command = parse_command(token_count, args);
+        // shellvis_execute(parsed_command);
+        // cleanup_command(&parsed_command);
         
+
+        command_batch_t batch = parse_command_batch(token_count, args);
+        shellvis_execute_batch(batch);
+        cleanup_command_batch(&batch);
     }
 
     shellvis_terminate();

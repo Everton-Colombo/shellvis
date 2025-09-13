@@ -67,7 +67,7 @@ void child_process_routine(command_t command, bool search_path) {
     exit(EXIT_FAILURE);
 }
 
-void start_process(command_t command, bool is_detached, bool search_path) {
+void start_process(command_t command, bool search_path) {
     pid_t pid;
     pid = fork();
 
@@ -75,7 +75,9 @@ void start_process(command_t command, bool is_detached, bool search_path) {
         child_process_routine(command, search_path);
 
     } else if (pid > 0) {   // If is parent process and succeeded
-        if (!is_detached) {
+        if (command.is_detached) {
+            printf("PID: %d\n", pid);
+        } else {
             int status;
             wait(&status);
         }
@@ -96,7 +98,7 @@ int shellvis_execute(command_t parsed_command) {
     }
 
     // If no builtin command was found, execute external command
-    start_process(parsed_command, false, strncmp("./", parsed_command.args[0], 2) != 0);
+    start_process(parsed_command, strncmp("./", parsed_command.args[0], 2) != 0);
     return 0;
 }
 
@@ -105,7 +107,8 @@ command_t parse_command(int argc, char** args) {
         .argc = 0,
         .args = NULL,
         .istream = stdin,
-        .ostream = stdout
+        .ostream = stdout,
+        .is_detached = false
     };
 
     // Creating new args array, clean of any redirects
@@ -139,6 +142,9 @@ command_t parse_command(int argc, char** args) {
             } else {
                 printf("[shellvis]: Missing filename after '<'\n");
             }
+        } else if (strcmp("&", args[i]) == 0) {
+            // Detached execution marker
+            parsed_command.is_detached = true;
         } else {
             // Regular argument
             new_args[new_argc] = args[i];
@@ -165,4 +171,73 @@ void cleanup_command(command_t* cmd) {
         free(cmd->args);
         cmd->args = NULL;
     }
+}
+
+command_batch_t parse_command_batch(int argc, char** args) {
+    command_batch_t batch = {0};
+    
+    // Count commands by counting '&' separators followed by other tokens
+    int command_count = argc > 0 ? 1 : 0;
+    for (int i = 0; i < argc; i++) {
+        if (strcmp("&", args[i]) == 0 && i+1 != argc) {
+            command_count++;
+        }
+    }
+    
+    batch.commands = malloc(command_count * sizeof(command_t));
+    batch.command_count = command_count;
+    
+    int current_command = 0;
+    int start_idx = 0;
+    
+    for (int i = 0; i < argc; i++) {
+        if (i+1 == argc || strcmp("&", args[i]) == 0) {
+            int cmd_argc = i+1 - start_idx;
+            char** cmd_args = &args[start_idx];
+            
+            batch.commands[current_command] = parse_command(cmd_argc, cmd_args);
+            batch.commands[current_command].is_detached = strcmp("&", args[i]) == 0;
+            
+            current_command++;
+            start_idx = i + 1;
+        }
+    }
+    
+    return batch;
+}
+
+int shellvis_execute_batch(command_batch_t batch) {
+    for (int i = 0; i < batch.command_count; i++) {
+        command_t cmd = batch.commands[i];
+        
+        if (cmd.argc == 0) continue;
+        
+        // Check for builtin commands
+        bool is_builtin = false;
+        for (int j = 0; j < shellvis_num_builtins(); j++) {
+            if (strcmp(cmd.args[0], builtin_names[j]) == 0) {
+                (*builtin_funcs[j])(cmd);
+                is_builtin = true;
+                break;
+            }
+        }
+        
+        // Execute external command if not builtin
+        if (!is_builtin) {
+            start_process(cmd, strncmp("./", cmd.args[0], 2) != 0);
+        }
+    }
+    
+    return 0;
+}
+
+void cleanup_command_batch(command_batch_t* batch) {
+    for (int i = 0; i < batch->command_count; i++) {
+        cleanup_command(&(batch->commands[i]));
+    }
+    if (batch->commands) {
+        free(batch->commands);
+        batch->commands = NULL;
+    }
+    batch->command_count = 0;
 }
