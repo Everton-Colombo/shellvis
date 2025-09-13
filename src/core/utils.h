@@ -13,8 +13,10 @@ TAILQ_HEAD(str_list, str_listnode);
 
 void strlist_free(struct str_list* strlist);
 void strlist_append(struct str_list* strlist, char* str);
-void strlist_print(struct str_list* strlist);
+void strlist_fprint(struct str_list* strlist, FILE* stream);
 
 size_t split_string(char *input, const char *delimiters, char *tokens[], size_t max_tokens);
+
+int strarray_pop(char** strarray, size_t array_size, int i);
 
 #endif // UTILS_H
