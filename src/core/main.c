@@ -1,35 +1,42 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stddef.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "builtins.h"
 #include "utils.h"
+#include "execution.h"
 
 #define MAX_LINE 1024
 
 struct str_list g_path;
 
-void init() {
+void shellvis_init() {
     TAILQ_INIT(&g_path);
 
     // Add bin/external_commands to PATH
-    shellvis_execute(3, (char*[]){"path", "bin/external_commands", "--shh", NULL});
+    shellvis_execute((command_t) {
+        .argc = 3,
+        .args = (char*[]){"path", "bin/external_commands", "--shh", NULL},
+        .istream = stdin,
+        .ostream = stdout
+    });
 
     // Add /bin to PATH
-    shellvis_execute(3, (char*[]){"path", "/bin", "--shh", NULL});
+    shellvis_execute((command_t) {
+        .argc = 3,
+        .args = (char*[]){"path", "/bin", "--shh", NULL},
+        .istream = stdin,
+        .ostream = stdout
+    });
 }
 
 
-void terminate() {
+void shellvis_terminate() {
     strlist_free(&g_path);
 }
 
-void greetings() {
+void shellvis_greetings() {
     FILE *file;
     char line[MAX_LINE];
     
@@ -50,74 +57,13 @@ void greetings() {
     printf("This system is 100%% bug-free. Any observed anomalies are features, not errors.\nPlease report any new features to the administrator.\n\n");
 }
 
-void start_process(char** args, bool is_detached, bool search_path) {
-    pid_t pid;
-    pid = fork();
-
-    if (pid == 0) { // If is child process
-        char final_path[MAX_LINE];
-        bool found_executable = false;
-
-        if (search_path) {
-            struct str_listnode* node;
-            TAILQ_FOREACH(node, &g_path, links) {
-                snprintf(final_path, sizeof(final_path), "%s/%s", node->str, args[0]);
-                if (access(final_path, X_OK) == 0) {
-                    found_executable = 1;
-                    break;
-                }
-            }
-        } else {
-            printf("LocalSearch\n");
-            strcpy(final_path, args[0]);
-            found_executable = access(final_path, X_OK) == 0;
-        }
-        
-        if (found_executable) {
-            int result = execv(final_path, args);
-            if (result == -1) {
-                printf("\"%s\": ", args[0]);
-                fflush(stdout);
-                perror("");
-            }
-        } else {
-            printf("Executable \"%s\" not found. Use the \'path\' command to add directories to the internal PATH list.\n", args[0]);
-        }
-
-    } else if (pid > 0) {   // If is parent process and succeeded
-        if (!is_detached) {
-            int status;
-            wait(&status);
-        }
-    } else {
-        printf("Could not create process.\n");
-    }
-}
-
-int shellvis_execute(int argc, char** args) {
-    if (argc == 0)
-        return 1;
-
-    // Searches for builtin commands
-    for (int i = 0; i < shellvis_num_builtins(); i++) {
-        if (strcmp(args[0], builtin_names[i]) == 0) {
-            return (*builtin_funcs[i])(argc, args);
-        }
-    }
-
-    // If no builtin command was found, execute external command
-    start_process(args, false, strncmp("./", args[0], 2) != 0);
-    return 0;
-}
-
-
 int main(int argc, char* argv[]) {
     char line[MAX_LINE];
     char* args[MAX_LINE / 2 + 1];
 
     FILE* input_stream = stdin;
 
-    init();
+    shellvis_init();
 
     if (argc > 1) {
         input_stream = fopen(argv[1], "r");
@@ -129,7 +75,7 @@ int main(int argc, char* argv[]) {
             fflush(stdout);
         }
     } else {
-        greetings();
+        shellvis_greetings();
     }
 
     while (true) {
@@ -142,13 +88,16 @@ int main(int argc, char* argv[]) {
             printf("\n");
             break; 
         }
-        line[strcspn(line, "\n")] = 0;
+        line[strcspn(line, "\n")] = '\0';
 
         size_t token_count = (size_t) split_string(line, " ", args, MAX_LINE / 2 + 1);
-        shellvis_execute(token_count, args);
+        command_t parsed_command = parse_command(token_count, args);
+        shellvis_execute(parsed_command);
+        cleanup_command(&parsed_command);
+        
     }
 
-    terminate();
+    shellvis_terminate();
 
     return 0;
 }

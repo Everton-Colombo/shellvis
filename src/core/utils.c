@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "utils.h"
 
@@ -45,15 +46,35 @@ void strlist_append(struct str_list* strlist, char* str) {
     TAILQ_INSERT_TAIL(strlist, new_node, links);
 }
 
-void strlist_print(struct str_list* strlist) {
+void strlist_fprint(struct str_list* strlist, FILE* stream) {
+    if (stream == NULL)
+        stream = stdout;
+
     int is_empty = 1;
     struct str_listnode *node;
     TAILQ_FOREACH(node, strlist, links) {
         is_empty = 0;
-        printf("- %s\n", node->str);
+        fprintf(stream, "- %s\n", node->str);
     }
 
     if (is_empty)
-        printf("(empty)\n");
-    printf("\n");
+        fprintf(stream, "(empty)\n");
+    fprintf(stream, "\n");
+}
+
+int strarray_pop(char** strarray, size_t array_size, int i) {
+    if (!strarray || i < 0 || i >= array_size || !strarray[i]) {
+        return -1;
+    }
+
+    free(strarray[i]);
+    strarray[i] = NULL;
+
+    // Shift elements to the left to fill the gap
+    for (int j = i; j < array_size - 1; j++) {
+        strarray[j] = strarray[j + 1];
+    }
+    strarray[array_size - 1] = NULL;
+
+    return 0;
 }

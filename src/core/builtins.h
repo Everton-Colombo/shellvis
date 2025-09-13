@@ -2,6 +2,7 @@
 #define BULTINS_H
 
 #include "utils.h"
+#include "execution.h"
 
 extern struct str_list g_path;
 
@@ -10,6 +11,6 @@ void builtins_terminate();
 int shellvis_num_builtins();
 
 extern char *builtin_names[];
-extern int (*builtin_funcs[]) (int, char**);
+extern int (*builtin_funcs[]) (command_t);
 
 #endif
