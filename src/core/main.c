@@ -6,6 +6,7 @@
 #include "builtins.h"
 #include "utils.h"
 #include "execution.h"
+#include "data.h"
 
 #define MAX_LINE 1024
 
@@ -37,23 +38,9 @@ void shellvis_terminate() {
 }
 
 void shellvis_greetings() {
-    FILE *file;
-    char line[MAX_LINE];
-    
-    file = fopen("data/elvis.txt", "r");
-    if (file == NULL) {
-        perror("Error opening file");
-        return;
-    }
-    
-    while (fgets(line, sizeof(line), file) != NULL) {
-        printf("%s", line);
-    }
-    
-    fclose(file);
+    fwrite(elvis_ascii, 1, elvis_ascii_len, stdout);
 
-
-    printf("\n\t SHELLVIS v0.0.1\n\n");
+    printf("\n SHELLVIS v0.0.1\n\n");
     printf("This system is 100%% bug-free. Any observed anomalies are features, not errors.\nPlease report any new features to the administrator.\n\n");
 }
 
