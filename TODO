@@ -1,5 +1,5 @@
 - add executable execution with ./ DONE
 - add import path env functionality
 - standardize error handling
-- output & input redirect > <
-- parallel execution of commands
+- output & input redirect > < DONE
+- parallel execution of commands DONE
