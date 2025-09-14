@@ -14,7 +14,7 @@ int shellvis_cd(command_t cmd) {
     }
 
     if (chdir(cmd.args[1]) == 0) {
-        fprintf(cmd.ostream, "workdir changed to %s\n\n", cmd.args[1]);
+        fprintf(cmd.ostream, "Workdir changed to \"%s\"\n\n", cmd.args[1]);
         fflush(cmd.ostream);
         return 0;
     } else {

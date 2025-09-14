@@ -48,7 +48,8 @@ void child_process_routine(command_t command, bool search_path) {
         // If not found in g_path, try system PATH
         if (!found_executable) {
             execvp(command.args[0], command.args); // This will handle system PATH
-            perror(command.args[0]);
+            // If execvp returns, it means the command was not found
+            fprintf(stderr, "[shellvis]: command not found: %s\n", command.args[0]);
             exit(EXIT_FAILURE);
         }
     } else {
@@ -59,12 +60,13 @@ void child_process_routine(command_t command, bool search_path) {
     
     if (found_executable) {
         execv(final_path, command.args);
-        perror(command.args[0]);
+        // If execv returns, there was an error
+        fprintf(stderr, "[shellvis]: exec failed: %s\n", command.args[0]);
+        exit(EXIT_FAILURE);
     } else {
-        printf("Executable \"%s\" not found.\n", command.args[0]);
+        fprintf(stderr, "[shellvis]: command not found: %s\n", command.args[0]);
+        exit(EXIT_FAILURE);
     }
-    
-    exit(EXIT_FAILURE);
 }
 
 void start_process(command_t command, bool search_path) {
@@ -76,13 +78,13 @@ void start_process(command_t command, bool search_path) {
 
     } else if (pid > 0) {   // If is parent process and succeeded
         if (command.is_detached) {
-            printf("PID: %d\n", pid);
+            printf("PID (%s): %d\n", command.args[0], pid);
         } else {
             int status;
-            wait(&status);
+            waitpid(pid, &status, 0);
         }
     } else {
-        printf("Could not create process.\n");
+        fprintf(stderr, "[shellvis]: could not create process: fork failed\n");
     }
 }
 
